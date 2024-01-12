@@ -2240,18 +2240,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
                     removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
                     removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
@@ -2275,18 +2275,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
                     removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
                     removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
@@ -2310,18 +2310,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
                     removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
                     removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
