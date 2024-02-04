@@ -29,8 +29,6 @@
 
 #include "fs.h"
 
-#include <cerrno>
-#include <cstring>
 #include <filesystem>
 
 #if defined(Q_OS_WIN)
@@ -52,6 +50,7 @@
 #include <unistd.h>
 #endif
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
@@ -342,7 +341,8 @@ nonstd::expected<void, QString> Utils::Fs::moveFileToTrash(const Path &path)
     if (file.moveToTrash())
         return {};
 
-    return nonstd::make_unexpected(file.errorString());
+    const QString errorMessage = file.errorString();
+    return nonstd::make_unexpected(!errorMessage.isEmpty() ? errorMessage : QCoreApplication::translate("fs", "Unknown error"));
 }
 
 
