@@ -61,6 +61,7 @@
 #include <QStorageInfo>
 
 #include "base/global.h"
+#include "base/logger.h"
 #include "base/path.h"
 
 /**
@@ -329,17 +330,33 @@ nonstd::expected<void, QString> Utils::Fs::removeFile(const Path &path)
 
 nonstd::expected<void, QString> Utils::Fs::moveFileToTrash(const Path &path)
 {
+    LogMsg(u"\"%1\" is about to be moved to trash."_s.arg(path.toString()));
     QFile file {path.data()};
     if (file.moveToTrash())
+    {
+        LogMsg(u"\"%1\" is successfully moved to trash. Path in trash: \"%2\"."_s.arg(path.toString(), file.fileName()));
+        if (QFile(path.data()).exists())
+            LogMsg(u"\"%1\" still exists. Oops..."_s.arg(path.toString()));
         return {};
+    }
 
     if (!file.exists())
+    {
+        LogMsg(u"\"%1\" doesn't actually exist. Ignoring it."_s.arg(file.fileName()));
         return {};
+    }
+
+    LogMsg(u"\"%1\" failed to be moved to trash. Will try again with adjusting permissions."_s.arg(file.fileName()));
 
     // Make sure we have read/write permissions
     file.setPermissions(file.permissions() | QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser);
     if (file.moveToTrash())
+    {
+        LogMsg(u"\"%1\" is successfully moved to trash. Path in trash: \"%2\"."_s.arg(path.toString(), file.fileName()));
+        if (QFile(path.data()).exists())
+            LogMsg(u"\"%1\" still exists. Oops..."_s.arg(path.toString()));
         return {};
+    }
 
     const QString errorMessage = file.errorString();
     return nonstd::make_unexpected(!errorMessage.isEmpty() ? errorMessage : QCoreApplication::translate("fs", "Unknown error"));
