@@ -2429,12 +2429,15 @@ bool SessionImpl::removeTorrent(const TorrentID &id, const TorrentRemoveOption d
     if (const InfoHash infoHash = torrent->infoHash(); infoHash.isHybrid())
         m_hybridTorrentsByAltID.remove(TorrentID::fromSHA1Hash(infoHash.v1()));
 
+    const lt::torrent_handle nativeHandle = torrent->nativeHandle();
+    nativeHandle.unset_flags(lt::torrent_flags::auto_managed);
+    nativeHandle.pause();
+
     // Remove it from session
     if (deleteOption == TorrentRemoveOption::KeepContent)
     {
         m_removingTorrents[torrent->id()] = {torrent->name(), torrent->actualStorageLocation(), {}, deleteOption};
 
-        const lt::torrent_handle nativeHandle {torrent->nativeHandle()};
         const auto iter = std::find_if(m_moveStorageQueue.begin(), m_moveStorageQueue.end()
             , [&nativeHandle](const MoveStorageJob &job)
         {
@@ -2444,8 +2447,6 @@ bool SessionImpl::removeTorrent(const TorrentID &id, const TorrentRemoveOption d
         {
             // We shouldn't actually remove torrent until existing "move storage jobs" are done
             torrentQueuePositionBottom(nativeHandle);
-            nativeHandle.unset_flags(lt::torrent_flags::auto_managed);
-            nativeHandle.pause();
         }
         else
         {
