@@ -995,6 +995,17 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             </tr>
             <tr>
                 <td>
+                    <label for="torrentContentRemoveOption">QBT_TR(Torrent content removing mode:)QBT_TR[CONTEXT=OptionsDialog]</label>
+                </td>
+                <td>
+                    <select id="torrentContentRemoveOption" style="width: 15em;">
+                        <option value="Delete">QBT_TR(Delete files permanently)QBT_TR[CONTEXT=OptionsDialog]</option>
+                        <option value="MoveToTrash">QBT_TR(Move files to trash (if possible))QBT_TR[CONTEXT=OptionsDialog]</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <label for="memoryWorkingSetLimit">QBT_TR(Physical memory (RAM) usage limit (applied if libtorrent &gt;= 2.0):)QBT_TR[CONTEXT=OptionsDialog]&nbsp;<a href="https://wikipedia.org/wiki/Working_set" target="_blank">(?)</a></label>
                 </td>
                 <td>
@@ -2303,6 +2314,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                         // Advanced settings
                         // qBittorrent section
                         $('resumeDataStorageType').setProperty('value', pref.resume_data_storage_type);
+                        $('torrentContentRemoveOption').setProperty('value', pref.torrent_content_remove_option);
                         $('memoryWorkingSetLimit').setProperty('value', pref.memory_working_set_limit);
                         updateNetworkInterfaces(pref.current_network_interface, pref.current_interface_name);
                         updateInterfaceAddresses(pref.current_network_interface, pref.current_interface_address);
@@ -2749,6 +2761,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             // Update advanced settings
             // qBittorrent section
             settings.set('resume_data_storage_type', $('resumeDataStorageType').getProperty('value'));
+            settings.set('torrent_content_remove_option', $('torrentContentRemoveOption').getProperty('value'));
             settings.set('memory_working_set_limit', $('memoryWorkingSetLimit').getProperty('value'));
             settings.set('current_network_interface', $('networkInterface').getProperty('value'));
             settings.set('current_interface_address', $('optionalIPAddressToBind').getProperty('value'));

@@ -99,6 +99,7 @@
 #include "nativesessionextension.h"
 #include "portforwarderimpl.h"
 #include "resumedatastorage.h"
+#include "torrentcontentremover.h"
 #include "torrentdescriptor.h"
 #include "torrentimpl.h"
 #include "tracker.h"
@@ -518,6 +519,7 @@ SessionImpl::SessionImpl(QObject *parent)
     , m_I2POutboundQuantity {BITTORRENT_SESSION_KEY(u"I2P/OutboundQuantity"_s), 3}
     , m_I2PInboundLength {BITTORRENT_SESSION_KEY(u"I2P/InboundLength"_s), 3}
     , m_I2POutboundLength {BITTORRENT_SESSION_KEY(u"I2P/OutboundLength"_s), 3}
+    , m_torrentContentRemoveOption {BITTORRENT_SESSION_KEY(u"TorrentContentRemoveOption"_s), TorrentContentRemoveOption::MoveToTrash}
     , m_seedingLimitTimer {new QTimer(this)}
     , m_resumeDataTimer {new QTimer(this)}
     , m_ioThread {new QThread}
@@ -571,6 +573,11 @@ SessionImpl::SessionImpl(QObject *parent)
     m_fileSearcher->moveToThread(m_ioThread.get());
     connect(m_ioThread.get(), &QThread::finished, m_fileSearcher, &QObject::deleteLater);
     connect(m_fileSearcher, &FileSearcher::searchFinished, this, &SessionImpl::fileSearchFinished);
+
+    m_torrentContentDeleter = new TorrentContentRemover;
+    m_torrentContentDeleter->moveToThread(m_ioThread.get());
+    connect(m_ioThread.get(), &QThread::finished, m_torrentContentDeleter, &QObject::deleteLater);
+    connect(m_torrentContentDeleter, &TorrentContentRemover::jobFinished, this, &SessionImpl::torrentContentDeletionFinished);
 
     m_ioThread->start();
 
@@ -2233,18 +2240,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
-                    deleteTorrent(torrentID);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
+                    removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
-                    deleteTorrent(torrentID, DeleteTorrentAndFiles);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
+                    removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
@@ -2268,18 +2275,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
-                    deleteTorrent(torrentID);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
+                    removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
-                    deleteTorrent(torrentID, DeleteTorrentAndFiles);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
+                    removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
@@ -2303,18 +2310,18 @@ void SessionImpl::processShareLimits()
 
                 if (m_maxRatioAction == Remove)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent."), torrentName));
-                    deleteTorrent(torrentID);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be removed."), torrentName));
+                    removeTorrent(torrentID);
                 }
                 else if (m_maxRatioAction == DeleteFiles)
                 {
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Removed torrent and deleted its content."), torrentName));
-                    deleteTorrent(torrentID, DeleteTorrentAndFiles);
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent and its content will be removed."), torrentName));
+                    removeTorrent(torrentID, TorrentRemoveOption::RemoveContent);
                 }
                 else if ((m_maxRatioAction == Pause) && !torrent->isPaused())
                 {
+                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent will be paused."), torrentName));
                     torrent->pause();
-                    LogMsg(u"%1 %2 %3"_s.arg(description, tr("Torrent paused."), torrentName));
                 }
                 else if ((m_maxRatioAction == EnableSuperSeeding) && !torrent->isPaused() && !torrent->superSeeding())
                 {
@@ -2348,6 +2355,19 @@ void SessionImpl::fileSearchFinished(const TorrentID &id, const Path &savePath, 
             p.renamed_files[nativeIndexes[i]] = fileNames[i].toString().toStdString();
 
         m_nativeSession->async_add_torrent(p);
+    }
+}
+
+void SessionImpl::torrentContentDeletionFinished(const QString &torrentName, const QString &errorMessage)
+{
+    if (errorMessage.isEmpty())
+    {
+        LogMsg(tr("Torrent content removed. Torrent: \"%1\"").arg(torrentName));
+    }
+    else
+    {
+        LogMsg(tr("Failed to remove torrent content. Torrent: \"%1\". Error: \"%2\"")
+            .arg(torrentName, errorMessage), Log::WARNING);
     }
 }
 
@@ -2397,7 +2417,7 @@ void SessionImpl::banIP(const QString &ip)
 
 // Delete a torrent from the session, given its hash
 // and from the disk, if the corresponding deleteOption is chosen
-bool SessionImpl::deleteTorrent(const TorrentID &id, const DeleteOption deleteOption)
+bool SessionImpl::removeTorrent(const TorrentID &id, const TorrentRemoveOption deleteOption)
 {
     TorrentImpl *const torrent = m_torrents.take(id);
     if (!torrent)
@@ -2409,14 +2429,17 @@ bool SessionImpl::deleteTorrent(const TorrentID &id, const DeleteOption deleteOp
     if (const InfoHash infoHash = torrent->infoHash(); infoHash.isHybrid())
         m_hybridTorrentsByAltID.remove(TorrentID::fromSHA1Hash(infoHash.v1()));
 
-    // Remove it from session
-    if (deleteOption == DeleteTorrent)
-    {
-        m_removingTorrents[torrent->id()] = {torrent->name(), {}, deleteOption};
+    const lt::torrent_handle nativeHandle = torrent->nativeHandle();
+    nativeHandle.unset_flags(lt::torrent_flags::auto_managed);
+    nativeHandle.pause();
 
-        const lt::torrent_handle nativeHandle {torrent->nativeHandle()};
+    // Remove it from session
+    if (deleteOption == TorrentRemoveOption::KeepContent)
+    {
+        m_removingTorrents[torrent->id()] = {torrent->name(), torrent->actualStorageLocation(), {}, deleteOption};
+
         const auto iter = std::find_if(m_moveStorageQueue.begin(), m_moveStorageQueue.end()
-                                 , [&nativeHandle](const MoveStorageJob &job)
+            , [&nativeHandle](const MoveStorageJob &job)
         {
             return job.torrentHandle == nativeHandle;
         });
@@ -2424,8 +2447,6 @@ bool SessionImpl::deleteTorrent(const TorrentID &id, const DeleteOption deleteOp
         {
             // We shouldn't actually remove torrent until existing "move storage jobs" are done
             torrentQueuePositionBottom(nativeHandle);
-            nativeHandle.unset_flags(lt::torrent_flags::auto_managed);
-            nativeHandle.pause();
         }
         else
         {
@@ -2434,14 +2455,14 @@ bool SessionImpl::deleteTorrent(const TorrentID &id, const DeleteOption deleteOp
     }
     else
     {
-        m_removingTorrents[torrent->id()] = {torrent->name(), torrent->rootPath(), deleteOption};
+        m_removingTorrents[torrent->id()] = {torrent->name(), torrent->actualStorageLocation(), torrent->actualFilePaths(), deleteOption};
 
         if (m_moveStorageQueue.size() > 1)
         {
             // Delete "move storage job" for the deleted torrent
             // (note: we shouldn't delete active job)
             const auto iter = std::find_if((m_moveStorageQueue.begin() + 1), m_moveStorageQueue.end()
-                                     , [torrent](const MoveStorageJob &job)
+                , [torrent](const MoveStorageJob &job)
             {
                 return job.torrentHandle == torrent->nativeHandle();
             });
@@ -2449,7 +2470,7 @@ bool SessionImpl::deleteTorrent(const TorrentID &id, const DeleteOption deleteOp
                 m_moveStorageQueue.erase(iter);
         }
 
-        m_nativeSession->remove_torrent(torrent->nativeHandle(), lt::session::delete_files);
+        m_nativeSession->remove_torrent(torrent->nativeHandle(), lt::session::delete_partfile);
     }
 
     // Remove it from torrent resume directory
@@ -2482,7 +2503,7 @@ bool SessionImpl::cancelDownloadMetadata(const TorrentID &id)
     }
 #endif
 
-    m_nativeSession->remove_torrent(nativeHandle, lt::session::delete_files);
+    m_nativeSession->remove_torrent(nativeHandle);
     return true;
 }
 
@@ -3914,6 +3935,16 @@ void SessionImpl::setMergeTrackersEnabled(const bool enabled)
     m_isMergeTrackersEnabled = enabled;
 }
 
+TorrentContentRemoveOption SessionImpl::torrentContentRemoveOption() const
+{
+    return m_torrentContentRemoveOption;
+}
+
+void SessionImpl::setTorrentContentRemoveOption(const TorrentContentRemoveOption option)
+{
+    m_torrentContentRemoveOption = option;
+}
+
 QStringList SessionImpl::bannedIPs() const
 {
     return m_bannedIPs;
@@ -5063,7 +5094,7 @@ void SessionImpl::handleMoveTorrentStorageJobFinished(const Path &newPath)
         // Last job is completed for torrent that being removing, so actually remove it
         const lt::torrent_handle nativeHandle {finishedJob.torrentHandle};
         const RemovingTorrentData &removingTorrentData = m_removingTorrents[nativeHandle.info_hash()];
-        if (removingTorrentData.deleteOption == DeleteTorrent)
+        if (removingTorrentData.removeOption == TorrentRemoveOption::KeepContent)
             m_nativeSession->remove_torrent(nativeHandle, lt::session::delete_partfile);
     }
 }
@@ -5443,12 +5474,6 @@ void SessionImpl::handleAlert(const lt::alert *a)
         case lt::torrent_removed_alert::alert_type:
             handleTorrentRemovedAlert(static_cast<const lt::torrent_removed_alert *>(a));
             break;
-        case lt::torrent_deleted_alert::alert_type:
-            handleTorrentDeletedAlert(static_cast<const lt::torrent_deleted_alert *>(a));
-            break;
-        case lt::torrent_delete_failed_alert::alert_type:
-            handleTorrentDeleteFailedAlert(static_cast<const lt::torrent_delete_failed_alert *>(a));
-            break;
         case lt::portmap_error_alert::alert_type:
             handlePortmapWarningAlert(static_cast<const lt::portmap_error_alert *>(a));
             break;
@@ -5593,63 +5618,19 @@ void SessionImpl::handleTorrentRemovedAlert(const lt::torrent_removed_alert *p)
     const auto removingTorrentDataIter = m_removingTorrents.find(id);
     if (removingTorrentDataIter != m_removingTorrents.end())
     {
-        if (removingTorrentDataIter->deleteOption == DeleteTorrent)
+        if (removingTorrentDataIter->removeOption == TorrentRemoveOption::RemoveContent)
         {
-            LogMsg(tr("Removed torrent. Torrent: \"%1\"").arg(removingTorrentDataIter->name));
-            m_removingTorrents.erase(removingTorrentDataIter);
+            QMetaObject::invokeMethod(m_torrentContentDeleter, [this, jobData = *removingTorrentDataIter]
+            {
+                m_torrentContentDeleter->performJob(jobData.name, jobData.contentStoragePath
+                        , jobData.fileNames, m_torrentContentRemoveOption);
+            });
         }
+
+        LogMsg(tr("Torrent removed. Torrent: \"%1\"").arg(removingTorrentDataIter->name));
+
+        m_removingTorrents.erase(removingTorrentDataIter);
     }
-}
-
-void SessionImpl::handleTorrentDeletedAlert(const lt::torrent_deleted_alert *p)
-{
-#ifdef QBT_USES_LIBTORRENT2
-    const auto id = TorrentID::fromInfoHash(p->info_hashes);
-#else
-    const auto id = TorrentID::fromInfoHash(p->info_hash);
-#endif
-
-    const auto removingTorrentDataIter = m_removingTorrents.find(id);
-    if (removingTorrentDataIter == m_removingTorrents.end())
-        return;
-
-    // torrent_deleted_alert can also be posted due to deletion of partfile. Ignore it in such a case.
-    if (removingTorrentDataIter->deleteOption == DeleteTorrent)
-        return;
-
-    Utils::Fs::smartRemoveEmptyFolderTree(removingTorrentDataIter->pathToRemove);
-    LogMsg(tr("Removed torrent and deleted its content. Torrent: \"%1\"").arg(removingTorrentDataIter->name));
-    m_removingTorrents.erase(removingTorrentDataIter);
-}
-
-void SessionImpl::handleTorrentDeleteFailedAlert(const lt::torrent_delete_failed_alert *p)
-{
-#ifdef QBT_USES_LIBTORRENT2
-    const auto id = TorrentID::fromInfoHash(p->info_hashes);
-#else
-    const auto id = TorrentID::fromInfoHash(p->info_hash);
-#endif
-
-    const auto removingTorrentDataIter = m_removingTorrents.find(id);
-    if (removingTorrentDataIter == m_removingTorrents.end())
-        return;
-
-    if (p->error)
-    {
-        // libtorrent won't delete the directory if it contains files not listed in the torrent,
-        // so we remove the directory ourselves
-        Utils::Fs::smartRemoveEmptyFolderTree(removingTorrentDataIter->pathToRemove);
-
-        LogMsg(tr("Removed torrent but failed to delete its content and/or partfile. Torrent: \"%1\". Error: \"%2\"")
-                .arg(removingTorrentDataIter->name, QString::fromLocal8Bit(p->error.message().c_str()))
-            , Log::WARNING);
-    }
-    else // torrent without metadata, hence no files on disk
-    {
-        LogMsg(tr("Removed torrent. Torrent: \"%1\"").arg(removingTorrentDataIter->name));
-    }
-
-    m_removingTorrents.erase(removingTorrentDataIter);
 }
 
 void SessionImpl::handleMetadataReceivedAlert(const lt::metadata_received_alert *p)
@@ -6042,7 +6023,7 @@ void SessionImpl::handleTorrentConflictAlert(const lt::torrent_conflict_alert *a
     if (torrent2)
     {
         if (torrent1)
-            deleteTorrent(torrentIDv1);
+            removeTorrent(torrentIDv1);
         else
             cancelDownloadMetadata(torrentIDv1);
 
