@@ -439,6 +439,9 @@ namespace BitTorrent
         void topTorrentsQueuePos(const QVector<TorrentID> &ids) override;
         void bottomTorrentsQueuePos(const QVector<TorrentID> &ids) override;
 
+        QString getLastExternalIPv6Address() const override;
+        QString getLastExternalIPv4Address() const override;
+
         // Torrent interface
         void handleTorrentResumeDataRequested(const TorrentImpl *torrent);
         void handleTorrentShareLimitChanged(TorrentImpl *torrent);
@@ -793,7 +796,8 @@ namespace BitTorrent
 
         QList<MoveStorageJob> m_moveStorageQueue;
 
-        QString m_lastExternalIP;
+        QString m_lastExternalIPv6Address;
+        QString m_lastExternalIPv4Address;
 
         bool m_needUpgradeDownloadPath = false;
 
