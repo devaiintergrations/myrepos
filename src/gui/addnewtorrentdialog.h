@@ -92,6 +92,8 @@ private:
     void setMetadataProgressIndicator(bool visibleIndicator, const QString &labelText = {});
     void setupTreeview();
     void saveTorrentFile();
+    void showContentFilterContextMenu();
+    void setContentFilterPattern();
 
     Ui::AddNewTorrentDialog *m_ui = nullptr;
     std::unique_ptr<TorrentContentAdaptor> m_contentAdaptor;

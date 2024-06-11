@@ -102,6 +102,8 @@ private slots:
 
 private:
     QPushButton *getButtonFromIndex(int index);
+    void showContentFilterContextMenu();
+    void setContentFilterPattern();
 
     Ui::PropertiesWidget *m_ui = nullptr;
     BitTorrent::Torrent *m_torrent = nullptr;

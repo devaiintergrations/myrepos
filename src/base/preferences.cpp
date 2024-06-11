@@ -1805,6 +1805,19 @@ void Preferences::setRegexAsFilteringPatternForTransferList(const bool checked)
     setValue(u"TransferList/UseRegexAsFilteringPattern"_s, checked);
 }
 
+bool Preferences::getTorrentContentFilterUseRegex() const
+{
+    return value(u"TorrentContent/FilterUseRegex"_s, false);
+}
+
+void Preferences::setTorrentContentFilterUseRegex(const bool value)
+{
+    if (value == getTorrentContentFilterUseRegex())
+        return;
+
+    setValue(u"TorrentContent/FilterUseRegex"_s, value);
+}
+
 // From old RssSettings class
 bool Preferences::isRSSWidgetEnabled() const
 {
