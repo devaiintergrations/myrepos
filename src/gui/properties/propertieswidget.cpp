@@ -311,7 +311,8 @@ void PropertiesWidget::loadTorrentInfos(BitTorrent::Torrent *const torrent)
         m_ui->labelCreatedByVal->setText(m_torrent->creator());
 
         // Private
-        m_ui->labelPrivateVal->setText(m_torrent->isPrivate() ? QStringLiteral("Yes") : QStringLiteral("No"));
+        m_ui->labelPrivateVal->setText((m_torrent && m_torrent->isPrivate()) ? tr("Yes") : tr("No"));
+
     }
     // Load dynamic data
     loadDynamicData();
