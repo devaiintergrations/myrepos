@@ -193,6 +193,7 @@ QVariant TransferListModel::headerData(const int section, const Qt::Orientation 
             case TR_INFOHASH_V1: return tr("Info Hash v1", "i.e: torrent info hash v1");
             case TR_INFOHASH_V2: return tr("Info Hash v2", "i.e: torrent info hash v2");
             case TR_REANNOUNCE: return tr("Reannounce In", "Indicates the time until next trackers reannounce");
+            case TR_PRIVATE: return tr("Private", "Flags torrents form private trackers");
             default: return {};
             }
         }
@@ -357,6 +358,13 @@ QString TransferListModel::displayValue(const BitTorrent::Torrent *torrent, cons
         return Utils::Misc::userFriendlyDuration(time);
     };
 
+    const auto privateString = [](const bool isPrivate) -> QString
+    {
+        if (isPrivate)
+            return QStringLiteral("Yes");
+        return QStringLiteral("No");
+    };
+
     switch (column)
     {
     case TR_NAME:
@@ -431,6 +439,8 @@ QString TransferListModel::displayValue(const BitTorrent::Torrent *torrent, cons
         return hashString(torrent->infoHash().v2());
     case TR_REANNOUNCE:
         return reannounceString(torrent->nextAnnounce());
+    case TR_PRIVATE:
+        return privateString(torrent->isPrivate());
     }
 
     return {};
@@ -578,6 +588,7 @@ QVariant TransferListModel::data(const QModelIndex &index, const int role) const
         case TR_LAST_ACTIVITY:
         case TR_AVAILABILITY:
         case TR_REANNOUNCE:
+        case TR_PRIVATE:
             return QVariant(Qt::AlignRight | Qt::AlignVCenter);
         }
         break;
