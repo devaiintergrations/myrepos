@@ -321,6 +321,8 @@ AddNewTorrentDialog::AddNewTorrentDialog(const BitTorrent::TorrentDescriptor &to
     // Torrent content filtering
     m_filterLine->setPlaceholderText(tr("Filter files..."));
     m_filterLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_filterLine->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_filterLine, &QWidget::customContextMenuRequested, this, &AddNewTorrentDialog::showContentFilterContextMenu);
     m_ui->contentFilterLayout->insertWidget(3, m_filterLine);
     const auto *focusSearchHotkey = new QShortcut(QKeySequence::Find, this);
     connect(focusSearchHotkey, &QShortcut::activated, this, [this]()
@@ -365,7 +367,7 @@ AddNewTorrentDialog::AddNewTorrentDialog(const BitTorrent::TorrentDescriptor &to
         });
         dlg->open();
     });
-    connect(m_filterLine, &LineEdit::textChanged, m_ui->contentTreeView, &TorrentContentWidget::setFilterPattern);
+    connect(m_filterLine, &LineEdit::textChanged, this, &AddNewTorrentDialog::setContentFilterPattern);
     connect(m_ui->buttonSelectAll, &QPushButton::clicked, m_ui->contentTreeView, &TorrentContentWidget::checkAll);
     connect(m_ui->buttonSelectNone, &QPushButton::clicked, m_ui->contentTreeView, &TorrentContentWidget::checkNone);
     connect(Preferences::instance(), &Preferences::changed, []
@@ -694,6 +696,32 @@ void AddNewTorrentDialog::saveTorrentFile()
         QMessageBox::critical(this, tr("I/O Error")
                 , tr("Couldn't export torrent metadata file '%1'. Reason: %2.").arg(path.toString(), result.error()));
     }
+}
+
+void AddNewTorrentDialog::showContentFilterContextMenu()
+{
+    const Preferences *pref = Preferences::instance();
+
+    QMenu *menu = m_filterLine->createStandardContextMenu();
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    menu->addSeparator();
+
+    QAction *useRegexAct = menu->addAction(tr("Use regular expressions"));
+    useRegexAct->setCheckable(true);
+    useRegexAct->setChecked(pref->getTorrentContentFilterUseRegex());
+    connect(useRegexAct, &QAction::toggled, this, [this](const bool checked)
+    {
+        Preferences::instance()->setTorrentContentFilterUseRegex(checked);
+        setContentFilterPattern();
+    });
+
+    menu->popup(QCursor::pos());
+}
+
+void AddNewTorrentDialog::setContentFilterPattern()
+{
+    const auto mode = Preferences::instance()->getTorrentContentFilterUseRegex() ? FilterPatternMode::Regex : FilterPatternMode::Wildcards;
+    m_ui->contentTreeView->setFilterPattern(m_filterLine->text(), mode);
 }
 
 void AddNewTorrentDialog::populateSavePaths()

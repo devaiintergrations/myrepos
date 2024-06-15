@@ -78,7 +78,9 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     m_contentFilterLine = new LineEdit(this);
     m_contentFilterLine->setPlaceholderText(tr("Filter files..."));
     m_contentFilterLine->setFixedWidth(300);
-    connect(m_contentFilterLine, &LineEdit::textChanged, m_ui->filesList, &TorrentContentWidget::setFilterPattern);
+    m_contentFilterLine->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_contentFilterLine, &QWidget::customContextMenuRequested, this, &PropertiesWidget::showContentFilterContextMenu);
+    connect(m_contentFilterLine, &LineEdit::textChanged, this, &PropertiesWidget::setContentFilterPattern);
     m_ui->contentFilterLayout->insertWidget(3, m_contentFilterLine);
 
     m_ui->filesList->setDoubleClickAction(TorrentContentWidget::DoubleClickAction::Open);
@@ -272,6 +274,32 @@ void PropertiesWidget::updateSavePath(BitTorrent::Torrent *const torrent)
 {
     if (torrent == m_torrent)
         m_ui->labelSavePathVal->setText(m_torrent->savePath().toString());
+}
+
+void PropertiesWidget::showContentFilterContextMenu()
+{
+    const Preferences *pref = Preferences::instance();
+
+    QMenu *menu = m_contentFilterLine->createStandardContextMenu();
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    menu->addSeparator();
+
+    QAction *useRegexAct = menu->addAction(tr("Use regular expressions"));
+    useRegexAct->setCheckable(true);
+    useRegexAct->setChecked(pref->getTorrentContentFilterUseRegex());
+    connect(useRegexAct, &QAction::toggled, this, [this](const bool checked)
+    {
+        Preferences::instance()->setTorrentContentFilterUseRegex(checked);
+        setContentFilterPattern();
+    });
+
+    menu->popup(QCursor::pos());
+}
+
+void PropertiesWidget::setContentFilterPattern()
+{
+    const auto mode = Preferences::instance()->getTorrentContentFilterUseRegex() ? FilterPatternMode::Regex : FilterPatternMode::Wildcards;
+    m_ui->filesList->setFilterPattern(m_contentFilterLine->text(), mode);
 }
 
 void PropertiesWidget::updateTorrentInfos(BitTorrent::Torrent *const torrent)

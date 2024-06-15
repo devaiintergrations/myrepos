@@ -386,6 +386,8 @@ public:
     void setTransHeaderState(const QByteArray &state);
     bool getRegexAsFilteringPatternForTransferList() const;
     void setRegexAsFilteringPatternForTransferList(bool checked);
+    bool getTorrentContentFilterUseRegex() const;
+    void setTorrentContentFilterUseRegex(bool value);
     int getToolbarTextPosition() const;
     void setToolbarTextPosition(int position);
 

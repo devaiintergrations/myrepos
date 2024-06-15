@@ -52,6 +52,7 @@ add_library(qbt_gui STATIC
     desktopintegration.h
     downloadfromurldialog.h
     executionlogwidget.h
+    filterpatternmode.h
     flowlayout.h
     fspathedit.h
     fspathedit_p.h
