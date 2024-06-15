@@ -71,6 +71,7 @@ window.qBittorrent.PropGeneral = (function() {
         $("torrent_hash_v2").set("html", "");
         $("save_path").set("html", "");
         $("comment").set("html", "");
+        $("private").set("html", "");
         piecesBar.clear();
     };
 
@@ -211,6 +212,11 @@ window.qBittorrent.PropGeneral = (function() {
                     $("save_path").set("html", data.save_path);
 
                     $("comment").set("html", window.qBittorrent.Misc.parseHtmlLinks(window.qBittorrent.Misc.escapeHtml(data.comment)));
+
+                    const is_private = (data.is_private)
+                        ? "QBT_TR(Yes)QBT_TR[CONTEXT=PropertiesWidget]"
+                        : "QBT_TR(No)QBT_TR[CONTEXT=PropertiesWidget]";
+                    $("private").set("html", is_private);
                 }
                 else {
                     clearData();
