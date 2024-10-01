@@ -66,4 +66,3 @@ jobs:
       #     scan-options: --security
       #   env:
       #     COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}
-
